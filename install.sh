@@ -155,7 +155,19 @@ else
   RUNTIME=process
   warn "Docker is not usable here - switching to PROCESS mode (Minecraft runs as plain Java, no Docker needed)"
   case $PM in
-    apt) pkg openjdk-21-jre-headless; pkg openjdk-17-jre-headless; pkg openjdk-8-jre-headless || true ;;
+    apt)
+      # Debian/Ubuntu repos often lack Java 21/8 -> use the Adoptium (Temurin) apt repo
+      pkg gnupg wget apt-transport-https || true
+      CODENAME="$(. /etc/os-release; echo "${VERSION_CODENAME:-bookworm}")"
+      mkdir -p /etc/apt/keyrings
+      if curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --dearmor -o /etc/apt/keyrings/adoptium.gpg 2>>"$PKG_LOG"; then
+        echo "deb [signed-by=/etc/apt/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb $CODENAME main" > /etc/apt/sources.list.d/adoptium.list
+        apt-get update -qq >>"$PKG_LOG" 2>&1 || true
+        for v in 21 17 8 25; do pkg "temurin-$v-jre" && ok "Java $v (Temurin)" || warn "Java $v not available"; done
+      fi
+      # fallback to distro packages if Temurin did not work
+      ls /usr/lib/jvm/*/bin/java >/dev/null 2>&1 || { pkg openjdk-21-jre-headless || pkg openjdk-17-jre-headless || true; }
+      ;;
     apk) pkg openjdk21-jre-headless; pkg openjdk17-jre-headless; pkg openjdk8-jre || true ;;
     dnf|yum) pkg java-21-openjdk-headless; pkg java-17-openjdk-headless; pkg java-1.8.0-openjdk-headless || true ;;
   esac

@@ -1,0 +1,5 @@
+node_modules/
+panel/data/
+panel/config.json
+node/config.json
+.install.env

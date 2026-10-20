@@ -1,0 +1,6 @@
+**/node_modules
+panel/data
+panel/config.json
+node/config.json
+.git
+*.zip
